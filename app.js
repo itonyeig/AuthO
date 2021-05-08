@@ -1,9 +1,10 @@
 //jshint esversion:6
+require('dotenv').config()
 const express = require('express');
 const bodyParser = require('body-parser');
 const ejs = require('ejs')
 const mongoose = require('mongoose')
-const encrypt = require('mongoose-encryption')
+const md5 = require('md5'); //md5
 
 
 const app = express();
@@ -24,9 +25,7 @@ const userSchema =  new mongoose.Schema({
   password: String
 })
 
-//this is for the mongoose-encription package
-const secret = 'Loremipsumdolorsitametconsectetur'
-userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password'] });
+
 
 //use userSchema to set up new user 'model'
 const User = new mongoose.model('User', userSchema)
@@ -50,7 +49,8 @@ app.post('/register', function (req, res) {
     //create a new user uning the user model
     const newUser =  new User({
         email: req.body.username,
-        password: req.body.password
+        //this turns password into an irrevessable hash
+        password: md5(req.body.password)
     });
 
     //save the new user
@@ -67,7 +67,8 @@ app.post('/register', function (req, res) {
 app.post('/login', function (req, res) {
     //credentials that user put in
     const username = req.body.username
-    const password = req.body.password
+    //hash the password the user types in
+    const password = md5(req.body.password)
 
     //look through our collection of users. email is what we have in our database and username is what user entered
     User.findOne({ email: username }, function(err, foundUser){
