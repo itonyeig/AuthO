@@ -36,7 +36,8 @@ mongoose.connect('mongodb://localhost:27017/userDB', { useNewUrlParser: true, us
 //create user schema
 const userSchema =  new mongoose.Schema({
   email: String,
-  password: String
+  password: String,
+  secret: String
 })
 
 userSchema.plugin(passportLocalMongoose) // used to hash and salt password
@@ -68,7 +69,23 @@ app.get('/register', function(req, res){
 
 app.get('/secrets', function(req, res){
     if (req.isAuthenticated()) {
-        res.render('secrets')
+      let userSecret
+      let currentUser = req.user.username
+      let currentUserTrim = currentUser.substr(0, currentUser.indexOf('@'));
+
+      User.findById(req.user.id, function(err, foundUser){
+        if (err) {
+        console.log(err);
+      } else {
+        userSecret = foundUser.secret
+        console.log(foundUser);
+        res.render('secrets', {
+          userSecret: foundUser.secret,
+          currentUser: currentUserTrim
+        })
+      }
+      })
+        
     } else {
         res.redirect('/login')
     }
@@ -77,6 +94,14 @@ app.get('/secrets', function(req, res){
 app.get('/logout', function(req, res){
     req.logout();
   res.redirect('/');
+})
+
+app.get('/submit', function(req, res){
+  if (req.isAuthenticated()) {
+        res.render('submit')
+    } else {
+        res.redirect('/login')
+    }
 })
 
 
@@ -104,6 +129,31 @@ app.post('/login',
     res.redirect('/secrets');
   });
 
-app.listen(3000, function(){
-    console.log('server is running');
+//SUBMIT
+
+app.post('/submit', function (req, res){
+  const submittedSecret = req.body.secret;
+  
+
+  User.findById(req.user.id, function(err, foundUser){
+    if (err) {
+      console.log(err);
+    } else {
+      if (foundUser) {
+        foundUser.secret = submittedSecret;
+        foundUser.save(function(){
+          res.redirect('/secrets')
+        })
+      }
+    }
+  })
+
+})
+
+let port = process.env.PORT;
+if (port == null || port == "") {
+  port = 3000;
+}
+app.listen(port, function(){
+    console.log('server is running ' +  port);
 })
